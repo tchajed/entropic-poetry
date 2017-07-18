@@ -1,0 +1,15 @@
+# comments
+# regular text is interpreted literally
+# whitespace is lexed and recorded exactly for replay
+# general syntax: {name:type}
+# potential extension to refinements: {name:type | refinement}
+# shorthand: {type} (no binding, trivial refinement)
+# function calls for families: type literal(a,b) generates a set containing its arg list
+# verbs need conjugation; abuse function calls (though these functions only make sense applied to verb, and the functions are table lookups)
+# dependency: {?name} refers to a previous name (think of it as a set with one element; {name':?name} should work, but ?name' and ?name will always refer to the same thing)
+
+The {thing:noun} {past(verb)} {preposition} the {place:noun}.
+
+The {?place} had been {participle(verb)} {literal(a,10,100)} {literal(sec,min,year)} ago.
+
+{literal(Of course/Surprisingly/Amazingly/Subsequently)}, the {?thing} {literal(decided,was forced,made up its mind,had)} to {verb}.
