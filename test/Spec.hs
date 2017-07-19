@@ -101,3 +101,6 @@ main = hspec $ do
             it "should consume a single newline after a comment" $ do
                 (document, "# comment\n\nfoobar {noun}") `shouldParseTo`
                     [Literal "", Literal "\nfoobar ", noun]
+            it "should parse adjacent placeholders" $ do
+                (document, "{noun}{verb(past)}") `shouldParseTo`
+                    [noun, Placeholder (PlainType (Verb Past))]
