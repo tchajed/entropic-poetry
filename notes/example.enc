@@ -4,12 +4,12 @@
 # general syntax: {name:type}
 # potential extension to refinements: {name:type | refinement}
 # shorthand: {type} (no binding, trivial refinement)
-# function calls for families: type literal(a,b) generates a set containing its arg list
-# verbs need conjugation; abuse function calls (though these functions only make sense applied to verb, and the functions are table lookups)
+# function calls for families: type oneof(a,b) generates a set containing its arg list
+# "verb" is a family indexed by the conjugation of the verb
+# might have default indices for families (eg, noun(singular) and noun(plural), but noun is an abbrevation for noun(singular))
 # dependency: {?name} refers to a previous name (think of it as a set with one element; {name':?name} should work, but ?name' and ?name will always refer to the same thing)
 
-The {thing:noun} {past(verb)} {preposition} the {place:noun}.
+The {thing:noun} {verb(past)} {preposition} the {place:noun}.
 
-The {?place} had been {participle(verb)} {literal(a,10,100)} {literal(sec,min,year)} ago.
-
-{literal(Of course/Surprisingly/Amazingly/Subsequently)}, the {?thing} {literal(decided,was forced,made up its mind,had)} to {verb}.
+The {?place} had been {verb(participle)} {oneof(a,10,100)} {oneof(sec,min,year)} ago.
+{oneof(Of course,Surprisingly,Amazingly,Subsequently)}, the {?thing} {oneof(decided,was forced,made up its mind,had)} to {verb(infinitive)}.
