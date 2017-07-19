@@ -1,18 +1,22 @@
 {-# LANGUAGE Rank2Types, FlexibleContexts #-}
 import Lib
+
 import Test.Hspec
 import Text.Parsec
 import Control.Monad.Identity (Identity)
 
+{-# ANN module "HLint: ignore Redundant do" #-}
+{-# ANN module "HLint: ignore Use let" #-}
+
 -- infix version of expectParsesTo
 shouldParseTo :: (Stream s Identity Char, Show a, Eq a) => (ParsecT s () Identity a, s) -> a -> Expectation
-shouldParseTo (p, s) x = runParser p () "" s `shouldBe` (Right x)
+shouldParseTo (p, s) x = runParser p () "" s `shouldBe` Right x
 
 shouldNotParse :: (Show a, Eq a) => ParserT a -> String -> Expectation
-shouldNotParse p s = (runParser p () "" s) `shouldSatisfy`
-    (\r -> case r of
-            Left _ -> True
-            Right _ -> False)
+shouldNotParse p s = runParser p () "" s `shouldSatisfy`
+    \r -> case r of
+          Left _ -> True
+          Right _ -> False
 
 main :: IO ()
 main = hspec $ do
@@ -55,13 +59,13 @@ main = hspec $ do
         describe "placeholder" $ do
             it "should parse unbound noun" $ do
                 (placeholder, "{noun}") `shouldParseTo`
-                    (PlainType Noun)
+                    PlainType Noun
             it "should parse bound noun" $ do
                 (placeholder, "{name:noun}") `shouldParseTo`
-                    (Binding (Name "name") Noun)
+                    Binding (Name "name") Noun
             it "should parse bound verb" $ do
                 (placeholder, "{a1:verb(past)}") `shouldParseTo`
-                    (Binding (Name "a1") (Verb Past))
+                    Binding (Name "a1") (Verb Past)
             it "preposition function call should not parse" $ do
                 typeP `shouldNotParse` "{preposition()}"
             it "should parse references" $ do

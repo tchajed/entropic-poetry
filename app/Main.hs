@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import Parser (parseFormat)
 
 main :: IO ()
 main = return ()
