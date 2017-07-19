@@ -8,26 +8,18 @@ module Lib
       , Name(..)
       , Type(..)
       , Placeholder(..)
+      , Token(..)
+      , Document(..)
 
         -- parsers
       , conjugation
       , identifier
       , typeP
       , placeholder
+      , document
     ) where
 
 import Text.Parsec
-
-type ParserT a = forall m s. Stream s m Char => ParsecT s () m a
-
-comment :: ParserT ()
-comment = char '#' >> manyTill anyChar (try (char '\n')) >> return ()
-
-data Conjugation =
-    Past
-    | Participle
-    | Infinitive
-    deriving (Eq, Show)
 
 data Name = Name String
     deriving (Eq, Show)
@@ -44,6 +36,20 @@ data Placeholder =
     PlainType Type
     | Binding Name Type
     deriving (Eq, Show)
+
+data Token =
+    Literal String
+    | Placeholder Placeholder
+    deriving (Eq, Show)
+
+type Document = [Token]
+data Conjugation =
+    Past
+    | Participle
+    | Infinitive
+    deriving (Eq, Show)
+
+type ParserT a = forall m s. Stream s m Char => ParsecT s () m a
 
 conjugation :: ParserT Conjugation
 conjugation = choice [
@@ -85,3 +91,18 @@ placeholder = between (char '{') (char '}')
             t <- typeP
             return $ Binding b t
           typePlaceholder = PlainType <$> typeP
+
+comment :: ParserT ()
+comment = char '#' >> manyTill anyChar (try (char '\n')) >> return ()
+
+tokenP :: ParserT Token
+tokenP = choice [
+    comment >> return (Literal "")
+    , Placeholder <$> placeholder
+    -- TODO: surely there's a simpler way to stop just before a placeholder
+    -- (without resorting to looking ahead for a char '{')
+    , Literal <$> manyTill anyChar ((try (lookAhead placeholder) >> return ()) <|> eof)
+    ]
+
+document :: ParserT Document
+document = manyTill tokenP eof

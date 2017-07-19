@@ -69,6 +69,31 @@ main = hspec $ do
             it "should parse bound oneof" $ do
                 (placeholder, "{sel:oneof(a,b,c)}") `shouldParseTo`
                     Binding (Name "sel") (OneOf ["a", "b", "c"])
+            it "should parse numbers and symbols in oneof" $ do
+                (placeholder, "{oneof(1,*,/)}") `shouldParseTo`
+                    PlainType (OneOf ["1", "*", "/"])
+            it "should parse empty string in oneof" $ do
+                (placeholder, "{oneof(a,,b)}") `shouldParseTo`
+                    PlainType (OneOf ["a", "", "b"])
             it "should parse bound reference" $ do
                 (placeholder, "{name2:?name}") `shouldParseTo`
                     Binding (Name "name2") (Reference (Name "name"))
+        describe "document" $ do
+            noun <- return $ Placeholder (PlainType Noun)
+            it "should parse just literal" $ do
+                (document, "foobar") `shouldParseTo` [Literal "foobar"]
+            it "should parse literal and placeholder" $ do
+                (document, "foobar {noun}") `shouldParseTo`
+                    [Literal "foobar ", noun]
+            it "should parse placeholders and literals" $ do
+                (document, "{noun} foobar {noun} text") `shouldParseTo`
+                    [noun, Literal " foobar ", noun, Literal " text"]
+            it "should ignore comments" $ do
+                (document, "# comment\nfoobar {noun}") `shouldParseTo`
+                    [Literal "", Literal "foobar ", noun]
+            it "should preserve newlines" $ do
+                (document, "some\ntext{noun}\nhere") `shouldParseTo`
+                    [Literal "some\ntext", noun, Literal "\nhere"]
+            it "should consume a single newline after a comment" $ do
+                (document, "# comment\n\nfoobar {noun}") `shouldParseTo`
+                    [Literal "", Literal "\nfoobar ", noun]
