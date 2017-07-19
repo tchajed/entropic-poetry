@@ -1,1 +1,1 @@
-# poetry-enc
+# entropic-poetry
