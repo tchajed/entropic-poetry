@@ -5,6 +5,7 @@ module Parser where
 import Text.Parsec
 import Data.Text (Text)
 import Control.Monad.Identity (Identity)
+import Control.Monad (void)
 import Syntax
 
 type ParserT a = forall m s. Stream s m Char => ParsecT s () m a
@@ -34,7 +35,7 @@ typeP = choice [
         , string "preposition" >> return Preposition
         , char '?' >> Reference <$> identifier
         , OneOf <$> functionCall "oneof"
-            (literal `sepBy` (char ','))
+            (literal `sepBy` char ',')
     ]
     where
         literal :: ParserT String
@@ -59,7 +60,7 @@ tokenP = choice [
     , Placeholder <$> placeholder
     -- TODO: surely there's a simpler way to stop just before a placeholder
     -- (without resorting to looking ahead for a char '{')
-    , Literal <$> manyTill anyChar ((try (lookAhead placeholder) >> return ()) <|> eof)
+    , Literal <$> manyTill anyChar (void (try (lookAhead placeholder)) <|> eof)
     ]
 
 document :: ParserT Document
@@ -67,4 +68,4 @@ document = manyTill tokenP eof
 
 -- String is used as a filename
 parseFormat :: String -> Text -> Either ParseError Document
-parseFormat n s = runParser document () n s
+parseFormat = runParser document ()

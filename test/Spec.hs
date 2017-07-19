@@ -8,7 +8,6 @@ import Control.Monad.Identity (Identity)
 {-# ANN module "HLint: ignore Redundant do" #-}
 {-# ANN module "HLint: ignore Use let" #-}
 
--- infix version of expectParsesTo
 shouldParseTo :: (Stream s Identity Char, Show a, Eq a) => (ParsecT s () Identity a, s) -> a -> Expectation
 shouldParseTo (p, s) x = runParser p () "" s `shouldBe` Right x
 
@@ -18,6 +17,7 @@ shouldNotParse p s = runParser p () "" s `shouldSatisfy`
           Left _ -> True
           Right _ -> False
 
+-- TODO: switch to auto-discovered tests
 main :: IO ()
 main = hspec $ do
     describe "Parser" $ do
