@@ -51,12 +51,13 @@ placeholder = between (char '{') (char '}')
             return $ Binding b t
           typePlaceholder = PlainType <$> typeP
 
-comment :: ParserT ()
-comment = char '#' >> manyTill anyChar (try (char '\n')) >> return ()
+-- TODO: comments should also be terminated by eof
+comment :: ParserT String
+comment = char '#' >> manyTill anyChar (try (char '\n'))
 
 tokenP :: ParserT Token
 tokenP = choice [
-    comment >> return (Literal "")
+    Comment <$> comment
     , Placeholder <$> placeholder
     -- TODO: surely there's a simpler way to stop just before a placeholder
     -- (without resorting to looking ahead for a char '{')

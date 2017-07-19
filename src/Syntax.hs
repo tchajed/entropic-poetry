@@ -1,6 +1,12 @@
 module Syntax where
 
-data Name = Name String
+newtype Name = Name String
+    deriving (Eq, Show)
+
+data Conjugation =
+    Past
+    | Participle
+    | Infinitive
     deriving (Eq, Show)
 
 data Type =
@@ -17,13 +23,9 @@ data Placeholder =
     deriving (Eq, Show)
 
 data Token =
-    Literal String
+    Comment String
+    | Literal String
     | Placeholder Placeholder
     deriving (Eq, Show)
 
 type Document = [Token]
-data Conjugation =
-    Past
-    | Participle
-    | Infinitive
-    deriving (Eq, Show)
