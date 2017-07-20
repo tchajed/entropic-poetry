@@ -1,9 +1,9 @@
 module Lib (
     module Syntax
   , module Parser
-  , module EncDec
+  , module VarBase.EncDec
 ) where
 
 import Syntax
 import Parser
-import EncDec
+import VarBase.EncDec
