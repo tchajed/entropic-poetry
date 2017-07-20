@@ -5,25 +5,49 @@ import Syntax (Document)
 import Parser (parseFormat)
 import Options.Applicative
 import Data.Semigroup ((<>))
-import System.IO (withFile, IOMode(..))
+import System.IO (withFile, IOMode(..), stdin, stdout, Handle)
 import Data.Text.IO (hGetContents)
 import System.Exit (exitFailure)
 
-data FileFormat = AsBase64 | AsBinary
+data Input =
+    FromFile FilePath
+    | FromStdin
+
+inputFromStr :: String -> Input
+inputFromStr "-" = FromStdin
+inputFromStr s = FromFile s
+
+withInput :: Input -> (Handle -> IO a) -> IO a
+withInput FromStdin f = f stdin
+withInput (FromFile n) f = withFile n ReadMode f
+
+data Output =
+    ToFile FilePath
+    | ToStdout
+
+outputFromStr :: String -> Output
+outputFromStr "-" = ToStdout
+outputFromStr s = ToFile s
+
+withOutput :: Output -> (Handle -> IO a) -> IO a
+withOutput ToStdout f = f stdout
+withOutput (ToFile n) f = withFile n WriteMode f
 
 data Command =
-    EncCommand FilePath
-    | DecCommand FilePath
+    EncCommand Input
+    | DecCommand Input
+
+data FileFormat = AsBase64 | AsBinary
 
 data PoetryOptions = PoetryOptions
     { formatFilename :: String
-    , outputFile :: FilePath
+    , outputFile :: Output
     , outputFormat :: FileFormat
     , commandOpt :: Command }
 
 parseCommand :: Parser Command
 parseCommand =
-    let parseInput = argument str (metavar "input") in
+    let parseInput = inputFromStr <$> argument str (metavar "input") in
     subparser
         ( command "enc" (info (EncCommand <$> parseInput) ( progDesc "encode data into poetry" ))
        <> command "dec" (info (DecCommand <$> parseInput) ( progDesc "decode poem into data" )))
@@ -35,13 +59,13 @@ parseOpts = PoetryOptions
        <> short 'f'
        <> metavar "FILENAME"
        <> help "filename for format schema")
-    <*> strOption
+    <*> (outputFromStr <$> strOption
         ( long "output"
        <> short 'o'
        <> metavar "FILENAME"
        <> showDefault
        <> value "-"
-       <> help "filename to output to")
+       <> help "filename to output to"))
     <*> flag AsBase64 AsBinary
         ( long "binary"
        <> short 'b'
