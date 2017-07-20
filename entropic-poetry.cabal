@@ -15,11 +15,13 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Syntax, Parser, VarBase.EncDec, Lib
+  exposed-modules:     Syntax, Parser, VarBase.EncDec, EncDec, Lib
   build-depends:       base >= 4.7 && < 5
                      , parsec
                      , text
                      , mtl
+                     , containers
+                     , bytestring
   default-language:    Haskell2010
 
 executable entropic-poetry

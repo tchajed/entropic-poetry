@@ -1,7 +1,7 @@
 module Syntax where
 
 newtype Name = Name String
-    deriving (Eq, Show)
+    deriving (Eq, Show, Ord)
 
 data Conjugation =
     Past
