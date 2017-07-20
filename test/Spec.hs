@@ -17,9 +17,8 @@ shouldNotParse p s = runParser p () "" s `shouldSatisfy`
           Left _ -> True
           Right _ -> False
 
--- TODO: switch to auto-discovered tests
-main :: IO ()
-main = hspec $ do
+parserSpec :: Spec
+parserSpec =
     describe "Parser" $ do
         describe "conjugation" $ do
             it "past conjugation should parse" $ do
@@ -105,3 +104,27 @@ main = hspec $ do
             it "should parse adjacent placeholders" $ do
                 (document, "{noun}{verb(past)}") `shouldParseTo`
                     [noun, Placeholder (PlainType (Verb Past))]
+
+encdecSpec :: Spec
+encdecSpec = do
+    describe "variable-base encoder/decoder" $ do
+        describe "to numbers" $ do
+            it "encode(decode) = id" $ do
+                cs <- return [3,4,6,2]
+                ws <- return [2,0,3,1]
+                case decodeNum cs ws of
+                    Just x -> encodeNum cs x `shouldBe` (ws, 0)
+                    Nothing -> expectationFailure "decoding equal length should work"
+            it "decode(encode) = id" $ do
+                cs <- return [3,4,6,2]
+                n <- return 102
+                n `shouldSatisfy` (< (fromIntegral $ product cs))
+                (ws, rest) <- return $ encodeNum cs n
+                rest `shouldBe` 0
+                decodeNum cs ws `shouldBe` Just n
+
+-- TODO: switch to auto-discovered tests
+main :: IO ()
+main = hspec $ do
+    parserSpec
+    encdecSpec
