@@ -105,6 +105,30 @@ parserSpec =
                 (document, "{noun}{verb(past)}") `shouldParseTo`
                     [noun, Placeholder (PlainType (Verb Past))]
 
+encodeDecodeNum :: [Card] -> Integer -> (Integer, Integer, [Int])
+encodeDecodeNum cs n =
+    let (ws, n') = encodeNum cs n
+        (n2, ws') = decodeNum cs ws in
+        (n2, n', ws')
+
+decodeEncodeNum :: [Card] -> [Int] -> ([Int], [Int], Integer)
+decodeEncodeNum cs ws =
+    let (n, ws') = decodeNum cs ws
+        (ws2, n') = encodeNum cs n in
+        (ws2, ws', n')
+
+encodeDecode :: [Card] -> [Word8] -> ([Word8], [Word8], [Int])
+encodeDecode cs bs =
+    let (ws, bs') = encode cs bs
+        (bs2, ws') = decode cs ws in
+        (bs2, bs', ws')
+
+decodeEncode :: [Card] -> [Int] -> ([Int], [Int], [Word8])
+decodeEncode cs ws =
+    let (bs, ws') = decode cs ws
+        (ws2, bs') = encode cs bs in
+        (ws2, ws', bs')
+
 encdecSpec :: Spec
 encdecSpec = do
     describe "variable-base encoder/decoder" $ do
@@ -112,16 +136,13 @@ encdecSpec = do
             it "encode(decode) = id" $ do
                 cs <- return [3,4,6,2]
                 ws <- return [2,0,3,1]
-                case decodeNum cs ws of
-                    Just x -> encodeNum cs x `shouldBe` (ws, 0)
-                    Nothing -> expectationFailure "decoding equal length should work"
+                decodeEncodeNum cs ws `shouldBe` (ws, [], 0)
             it "decode(encode) = id" $ do
                 cs <- return [3,4,6,2]
                 n <- return 102
+                -- sanity check on constant
                 n `shouldSatisfy` (< (fromIntegral $ product cs))
-                (ws, rest) <- return $ encodeNum cs n
-                rest `shouldBe` 0
-                decodeNum cs ws `shouldBe` Just n
+                encodeDecodeNum cs n `shouldBe` (n, 0, [])
 
 -- TODO: switch to auto-discovered tests
 main :: IO ()

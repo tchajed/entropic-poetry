@@ -1,4 +1,8 @@
-module EncDec where
+module EncDec (
+      encode
+    , WordDatabase
+    , entropyBytes
+) where
 
 import Syntax
 import qualified VarBase.EncDec as VB
@@ -68,9 +72,12 @@ cardinalities db = map card
               card (Placeholder ph) = typeCard db (placeholderType ph)
               card _ = 1
 
+entropyBytes :: WordDatabase -> Document -> Double
+entropyBytes db d = sum (map cardEntropy (cardinalities db d))
+        where cardEntropy :: Int -> Double
+              cardEntropy c = logBase 256 (fromIntegral c)
+
 encode :: WordDatabase -> Document -> BS.ByteString -> String
 encode db fmt d =
-    let ws = VB.encode (cardinalities db fmt) (BS.unpack d) in
-        case ws of
-            Just ws -> encodeWords db fmt ws
-            Nothing -> "" -- there was leftover data
+    let (ws, d') = VB.encode (cardinalities db fmt) (BS.unpack d) in
+    encodeWords db fmt (ws ++ [0,0..])
