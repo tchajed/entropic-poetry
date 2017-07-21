@@ -3,6 +3,8 @@ module EncDec (
       encode
     , WordDatabase
     , entropyBytes
+    , decode
+    , DecodeError(..)
 ) where
 
 import Syntax
@@ -13,7 +15,7 @@ import Control.Monad.Reader
 import Control.Monad (zipWithM)
 import qualified Data.ByteString as BS
 import Data.List (elemIndex, stripPrefix)
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, mapMaybe)
 
 newtype WordDatabase = WordDatabase
     { _dbLookup :: Type -> [String] }
@@ -25,6 +27,9 @@ type DbMonad a = forall k. Monad k => ReaderT WordDatabase k a
 type CtxMT m a = ReaderT WordDatabase (StateT Ctx m) a
 
 type CtxM a = forall m. Monad m => CtxMT m a
+
+liftPossibilities :: [a] -> CtxMT [] a
+liftPossibilities = lift . lift
 
 wordsForType :: Type -> DbMonad [String]
 wordsForType t = asks (`_dbLookup` t)
@@ -82,9 +87,11 @@ cardinalities = mapM card
               card (Placeholder ph) = typeCard (placeholderType ph)
               card _ = return 1
 
-entropyBytes :: Document -> DbMonad Double
-entropyBytes d = sum <$> (map cardEntropy <$> cardinalities d)
-        where cardEntropy :: Int -> Double
+entropyBytes :: WordDatabase -> Document -> Double
+entropyBytes db d = runReader entropyM db
+        where entropyM :: DbMonad Double
+              entropyM = sum <$> (map cardEntropy <$> cardinalities d)
+              cardEntropy :: Int -> Double
               cardEntropy c = logBase 256 (fromIntegral c)
 
 runCtxM :: CtxM a -> WordDatabase -> a
@@ -95,23 +102,71 @@ encode db fmt d =
     let (ws, d') = VB.encode (runReader (cardinalities fmt) db) (BS.unpack d) in
     runCtxM (encodeWords fmt (ws ++ [0,0..])) db
 
-{- TODO:
-   [✓] decode a type by returning a list of matching prefixes of the input
-   [ ] modify the state within each backtrack point for bindings
-   [ ] at the top level, we will get several parses, each a list of indices and
-     the remaining input
-   [ ] finish off parsing by keeping only parses that consumed entire input
-   [ ] fail for empty parse list and ambiguous parses
--}
+-- abbreviation to annotate input stream in type signatures
+type Input = String
 
-decodeType :: Type -> String -> CtxMT [] (Int, String)
+-- decodes a type from the beginning of the input
+-- returns the decoded word, its index in the type, and the remaining input
+decodeType :: Type -> Input -> CtxMT [] (String, Int, Input)
 decodeType t s = do
     ws <- getWords t
     let parse i w = do
             rest <- stripPrefix w s
-            return (i, rest)
+            return (w, i, rest :: Input)
         possibleParses = catMaybes $ zipWith parse [0..] ws in
         -- inserting this lift was really difficult
-        (lift . lift) possibleParses
+        liftPossibilities possibleParses
 
--- decodeToken :: WordDatabase -> Token -> String -> EncM (Int, String)
+decodePlaceholder :: Placeholder -> Input -> CtxMT [] (Int, Input)
+decodePlaceholder ph s = do
+    (w, i, rest) <- decodeType (placeholderType ph) s
+    case ph of
+        Binding n _ -> addBinding n w >> return (i, rest)
+        _ -> return (i, rest)
+
+decodeToken :: Token -> Input -> CtxMT [] (Int, Input)
+decodeToken t s = case t of
+    Comment _ -> return (0, s)
+    Literal s -> decodePlaceholder (PlainType (OneOf [s])) s
+    Placeholder ph -> decodePlaceholder ph s
+
+decodeDocument :: Document -> Input -> CtxMT [] ([Int], Input)
+decodeDocument d s =
+    case d of
+        [] -> return ([], s)
+        t:d' -> do
+            (i, s) <- decodeToken t s
+            (is, s) <- decodeDocument d' s
+            return (i:is, s)
+
+decodeDocumentData :: Document -> Input -> CtxMT [] ([VB.Word8], Input)
+decodeDocumentData d s = do
+    cards <- cardinalities d
+    (ws, s) <- decodeDocument d s
+    let (bytes, ws') = VB.decode cards ws in
+        if ws' /= []
+            then liftPossibilities []
+            else return (bytes, s)
+
+runCtxMT :: Monad m => CtxMT m a -> WordDatabase -> m a
+runCtxMT m db = evalStateT (runReaderT m db) Map.empty
+
+data DecodeError =
+    NoParse
+    | IncompleteParse String
+    | AmbiguousParse [[VB.Word8]]
+    deriving (Eq, Show)
+
+completeParse :: (a, Input) -> Maybe a
+completeParse (x, s) = if null s then Just x else Nothing
+
+decode :: WordDatabase -> Document -> String -> Either DecodeError [VB.Word8]
+decode db d s =
+    let parses = runCtxMT (decodeDocumentData d s) db
+        completeParses = mapMaybe completeParse parses in
+        case parses of
+            [(p, s)] | s /= [] -> Left $ IncompleteParse s
+            _ -> case completeParses of
+                [] -> Left NoParse
+                [p] -> Right p
+                _ -> Left $ AmbiguousParse completeParses
