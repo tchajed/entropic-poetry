@@ -1,9 +1,7 @@
 {-# LANGUAGE Rank2Types #-}
 module EncDec (
     -- encoding
-      WordDatabase
-    , mkDatabase
-    , encode
+    encode
 
     -- decoding
     , DecodeError(..)
@@ -21,18 +19,13 @@ import Control.Monad (zipWithM)
 import qualified Data.ByteString as BS
 import Data.List (elemIndex, stripPrefix)
 import Data.Maybe (catMaybes, mapMaybe)
-
-newtype WordDatabase = WordDatabase
-    { _dbLookup :: Type -> [String] }
-
-mkDatabase :: (Type -> [String]) -> WordDatabase
-mkDatabase = WordDatabase
+import WordDatabase (WordList, getTypeWords)
 
 type Ctx = Map.Map Name String
 
-type DbMonad a = forall k. Monad k => ReaderT WordDatabase k a
+type DbMonad a = forall k. Monad k => ReaderT WordList k a
 
-type CtxMT m a = ReaderT WordDatabase (StateT Ctx m) a
+type CtxMT m a = ReaderT WordList (StateT Ctx m) a
 
 type CtxM a = forall m. Monad m => CtxMT m a
 
@@ -40,7 +33,7 @@ liftPossibilities :: [a] -> CtxMT [] a
 liftPossibilities = lift . lift
 
 wordsForType :: Type -> DbMonad [String]
-wordsForType t = asks (`_dbLookup` t)
+wordsForType t = asks (getTypeWords t)
 
 lookupName :: Name -> CtxM String
 lookupName name@(Name n) =
@@ -95,17 +88,17 @@ cardinalities = mapM card
               card (Placeholder ph) = typeCard (placeholderType ph)
               card _ = return 1
 
-entropyBytes :: WordDatabase -> Document -> Double
+entropyBytes :: WordList -> Document -> Double
 entropyBytes db d = runReader entropyM db
         where entropyM :: DbMonad Double
               entropyM = sum <$> (map cardEntropy <$> cardinalities d)
               cardEntropy :: Int -> Double
               cardEntropy c = logBase 256 (fromIntegral c)
 
-runCtxM :: CtxM a -> WordDatabase -> a
+runCtxM :: CtxM a -> WordList -> a
 runCtxM m db = evalState (runReaderT m db) Map.empty
 
-encode :: WordDatabase -> Document -> BS.ByteString -> String
+encode :: WordList -> Document -> BS.ByteString -> String
 encode db fmt d = runCtxM encodeM db
     where encodeM :: CtxM String
           encodeM = do
@@ -159,7 +152,7 @@ decodeDocumentData d s = do
             then liftPossibilities []
             else return (bytes, s)
 
-runCtxMT :: Monad m => CtxMT m a -> WordDatabase -> m a
+runCtxMT :: Monad m => CtxMT m a -> WordList -> m a
 runCtxMT m db = evalStateT (runReaderT m db) Map.empty
 
 data DecodeError =
@@ -171,7 +164,7 @@ data DecodeError =
 completeParse :: (a, Input) -> Maybe a
 completeParse (x, s) = if null s then Just x else Nothing
 
-decode :: WordDatabase -> Document -> String -> Either DecodeError BS.ByteString
+decode :: WordList -> Document -> String -> Either DecodeError BS.ByteString
 decode db d s =
     let parses = runCtxMT (decodeDocumentData d s) db
         completeParses = BS.pack <$> mapMaybe completeParse parses in

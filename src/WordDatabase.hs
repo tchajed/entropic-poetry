@@ -1,14 +1,17 @@
 {-# LANGUAGE Rank2Types, FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module WordDatabase.Parser (
+module WordDatabase (
       Section(..)
-    -- maybe parseSection for testing
+    , database -- for testing
+    , WordList
+    , getTypeWords
     , parseDatabase
     , typeWordMap
 ) where
 
 import Text.Parsec
+import Data.Text (Text)
 import Syntax
 import qualified Data.Map.Strict as Map
 import Control.Monad (void)
@@ -45,15 +48,23 @@ section = do
     words <- filter (not . null) <$> sepBy word (char '\n')
     return $ Section t words
 
-parseDatabase :: ParserT [Section]
-parseDatabase = do
+database :: ParserT [Section]
+database = do
     sections <- many section
     eof
     return sections
 
-typeWordMap :: [Section] -> Map.Map Type [String]
+type WordList = Map.Map Type [String]
+
+getTypeWords :: Type -> WordList -> [String]
+getTypeWords t l = Map.findWithDefault ["(" ++ show t ++ ")"] t l
+typeWordMap :: [Section] -> WordList
 typeWordMap ss = case ss of
     [] -> Map.empty
     Section{..}:ss ->
         let m = typeWordMap ss in
             Map.insertWith (++) secType wordList m
+
+parseDatabase :: String -> Text -> Either ParseError WordList
+parseDatabase =
+    runParser (typeWordMap <$> database) ()

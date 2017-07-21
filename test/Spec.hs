@@ -1,6 +1,6 @@
 {-# LANGUAGE Rank2Types, FlexibleContexts #-}
 import Lib
-import WordDatabase.Parser
+import WordDatabase
 
 import Test.Hspec
 import Text.Parsec
@@ -153,18 +153,18 @@ parseDatabaseSpec :: Spec
 parseDatabaseSpec = do
     describe "word database parser" $ do
         it "parses a single section" $ do
-            (parseDatabase, "#verb(past)\nwent\nsat") `shouldParseTo`
+            (database, "#verb(past)\nwent\nsat") `shouldParseTo`
                 [Section (Verb Past) ["went", "sat"]]
         it "parses removing whitespace" $ do
-            (parseDatabase, "# verb(past) \nwent \nsat\n") `shouldParseTo`
+            (database, "# verb(past) \nwent \nsat\n") `shouldParseTo`
                 [Section (Verb Past) ["went", "sat"]]
         it "removes empty lines" $ do
-            (parseDatabase, "# verb(past) \nwent \nsat\n\n") `shouldParseTo`
+            (database, "# verb(past) \nwent \nsat\n\n") `shouldParseTo`
                 [Section (Verb Past) ["went", "sat"]]
         it "rejects invalid types" $ do
-            parseDatabase `shouldNotParse` "# foo\n"
+            database `shouldNotParse` "# foo\n"
         it "parses multiple sections" $ do
-            (parseDatabase, "# verb(past)\n went\n sat\n #noun\n bat\n ball") `shouldParseTo`
+            (database, "# verb(past)\n went\n sat\n #noun\n bat\n ball") `shouldParseTo`
                 [ Section (Verb Past) ["went", "sat"]
                 , Section Noun ["bat", "ball"]]
 

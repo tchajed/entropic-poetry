@@ -19,8 +19,7 @@ library
                      , Parser
                      , VarBase.EncDec
                      , EncDec
-                     , WordDatabase.Parser
-                     , WordDatabase.Words
+                     , WordDatabase
                      , Lib
   build-depends:       base >= 4.7 && < 5
                      , parsec
