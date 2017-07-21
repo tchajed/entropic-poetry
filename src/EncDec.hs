@@ -1,10 +1,15 @@
 {-# LANGUAGE Rank2Types #-}
 module EncDec (
-      encode
-    , WordDatabase
-    , entropyBytes
-    , decode
+    -- encoding
+      WordDatabase
+    , mkDatabase
+    , encode
+
+    -- decoding
     , DecodeError(..)
+    , decode
+
+    , entropyBytes
 ) where
 
 import Syntax
@@ -19,6 +24,9 @@ import Data.Maybe (catMaybes, mapMaybe)
 
 newtype WordDatabase = WordDatabase
     { _dbLookup :: Type -> [String] }
+
+mkDatabase :: (Type -> [String]) -> WordDatabase
+mkDatabase = WordDatabase
 
 type Ctx = Map.Map Name String
 

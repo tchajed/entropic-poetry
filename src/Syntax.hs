@@ -7,7 +7,7 @@ data Conjugation =
     Past
     | Participle
     | Infinitive
-    deriving (Eq, Show)
+    deriving (Eq, Show, Ord)
 
 data Type =
     Verb Conjugation
@@ -16,7 +16,7 @@ data Type =
     -- these types are special: they do not need backing data
     | Reference Name
     | OneOf [String]
-    deriving (Eq, Show)
+    deriving (Eq, Show, Ord)
 
 data Placeholder =
     PlainType Type

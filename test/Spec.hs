@@ -1,5 +1,6 @@
 {-# LANGUAGE Rank2Types, FlexibleContexts #-}
 import Lib
+import WordDatabase.Parser
 
 import Test.Hspec
 import Text.Parsec
@@ -148,8 +149,28 @@ encdecSpec = do
                 n `shouldSatisfy` (< (fromIntegral $ product cs))
                 encodeDecodeNum cs n `shouldBe` (n, 0, [])
 
+parseDatabaseSpec :: Spec
+parseDatabaseSpec = do
+    describe "word database parser" $ do
+        it "parses a single section" $ do
+            (parseDatabase, "#verb(past)\nwent\nsat") `shouldParseTo`
+                [Section (Verb Past) ["went", "sat"]]
+        it "parses removing whitespace" $ do
+            (parseDatabase, "# verb(past) \nwent \nsat\n") `shouldParseTo`
+                [Section (Verb Past) ["went", "sat"]]
+        it "removes empty lines" $ do
+            (parseDatabase, "# verb(past) \nwent \nsat\n\n") `shouldParseTo`
+                [Section (Verb Past) ["went", "sat"]]
+        it "rejects invalid types" $ do
+            parseDatabase `shouldNotParse` "# foo\n"
+        it "parses multiple sections" $ do
+            (parseDatabase, "# verb(past)\n went\n sat\n #noun\n bat\n ball") `shouldParseTo`
+                [ Section (Verb Past) ["went", "sat"]
+                , Section Noun ["bat", "ball"]]
+
 -- TODO: switch to auto-discovered tests
 main :: IO ()
 main = hspec $ do
     parserSpec
     encdecSpec
+    parseDatabaseSpec
