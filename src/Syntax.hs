@@ -13,6 +13,7 @@ data Type =
     Verb Conjugation
     | Noun
     | Preposition
+    -- these types are special: they do not need backing data
     | Reference Name
     | OneOf [String]
     deriving (Eq, Show)

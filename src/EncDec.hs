@@ -98,9 +98,12 @@ runCtxM :: CtxM a -> WordDatabase -> a
 runCtxM m db = evalState (runReaderT m db) Map.empty
 
 encode :: WordDatabase -> Document -> BS.ByteString -> String
-encode db fmt d =
-    let (ws, d') = VB.encode (runReader (cardinalities fmt) db) (BS.unpack d) in
-    runCtxM (encodeWords fmt (ws ++ [0,0..])) db
+encode db fmt d = runCtxM encodeM db
+    where encodeM :: CtxM String
+          encodeM = do
+            cs <- cardinalities fmt
+            let (ws, d') = VB.encode cs (BS.unpack d) in
+                encodeWords fmt (ws ++ [0,0..])
 
 -- abbreviation to annotate input stream in type signatures
 type Input = String
@@ -154,16 +157,16 @@ runCtxMT m db = evalStateT (runReaderT m db) Map.empty
 data DecodeError =
     NoParse
     | IncompleteParse String
-    | AmbiguousParse [[VB.Word8]]
+    | AmbiguousParse [BS.ByteString]
     deriving (Eq, Show)
 
 completeParse :: (a, Input) -> Maybe a
 completeParse (x, s) = if null s then Just x else Nothing
 
-decode :: WordDatabase -> Document -> String -> Either DecodeError [VB.Word8]
+decode :: WordDatabase -> Document -> String -> Either DecodeError BS.ByteString
 decode db d s =
     let parses = runCtxMT (decodeDocumentData d s) db
-        completeParses = mapMaybe completeParse parses in
+        completeParses = BS.pack <$> mapMaybe completeParse parses in
         case parses of
             [(p, s)] | s /= [] -> Left $ IncompleteParse s
             _ -> case completeParses of
