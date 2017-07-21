@@ -129,6 +129,10 @@ decodeEncode cs ws =
         (ws2, bs') = encode cs bs in
         (ws2, ws', bs')
 
+-- TODO: this is an obvious candidate for quickcheck testing;
+-- just need to make sure that data generated fits within the cardinalities generated
+-- should also test leftover data in some way (not sure what the actual
+-- properties are; maybe just make sure decode(encode) results in a prefix?)
 encdecSpec :: Spec
 encdecSpec = do
     describe "variable-base encoder/decoder" $ do
