@@ -7,12 +7,12 @@ module VarBase.EncDec (
     , encode
 ) where
 
-import Data.Word (Word8)
+import Data.Word (Word8, Word)
 
 -- encoding: data -> variable-base number
 -- decoding: variable-base -> data
 
-type Card = Int
+type Card = Word
 
 -- if not given enough cardinalities, returns leftover words
 decodeNum :: [Card] -> [Int] -> (Integer, [Int])
@@ -25,6 +25,7 @@ decodeNum [] ws = (0, ws)
 -- returns leftover value that could not be encoded (0 if everything is encoded)
 encodeNum :: [Card] -> Integer -> ([Int], Integer)
 encodeNum [] n = ([], n)
+encodeNum _ 0 = ([0], 0)
 encodeNum (c:cs) n =
     let w = fromIntegral (n `mod` fromIntegral c) in
     let (ws, left) = encodeNum cs (n `div` fromIntegral c) in

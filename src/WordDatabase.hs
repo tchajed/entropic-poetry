@@ -56,7 +56,7 @@ wordList = do
 type WordList = Map.Map Type [String]
 
 getTypeWords :: Type -> WordList -> [String]
-getTypeWords t l = Map.findWithDefault ["(" ++ show t ++ ")"] t l
+getTypeWords t = Map.findWithDefault ["(" ++ show t ++ ")"] t
 
 typeWordMap :: [Section] -> WordList
 typeWordMap ss = case ss of

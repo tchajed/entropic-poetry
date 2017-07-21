@@ -1,8 +1,12 @@
 {-# LANGUAGE Rank2Types, FlexibleContexts #-}
 import Lib
+import VarBase.EncDec (Card, Word8)
+import qualified VarBase.EncDec as VB
 import WordDatabase
 
 import Test.Hspec
+import Test.QuickCheck
+
 import Text.Parsec
 import Control.Monad.Identity (Identity)
 
@@ -106,48 +110,95 @@ parserSpec =
                 (document, "{noun}{verb(past)}") `shouldParseTo`
                     [noun, Placeholder (PlainType (Verb Past))]
 
+cardGen :: Gen [Card]
+cardGen = listOf1 (choose (1, 2048))
+
 encodeDecodeNum :: [Card] -> Integer -> (Integer, Integer, [Int])
 encodeDecodeNum cs n =
-    let (ws, n') = encodeNum cs n
-        (n2, ws') = decodeNum cs ws in
+    let (ws, n') = VB.encodeNum cs n
+        (n2, ws') = VB.decodeNum cs ws in
         (n2, n', ws')
+
+cardNumGen :: [Card] -> Gen Integer
+cardNumGen cs = choose (0, product (map fromIntegral cs) - 1)
+
+-- TODO: standardize on diagrammatic order for names
+prop_decode_encode_num_id :: Property
+prop_decode_encode_num_id =
+    forAll cardGen $ \cs ->
+        forAll (cardNumGen cs) $ \n ->
+            encodeDecodeNum cs n `shouldBe` (n, 0, [])
 
 decodeEncodeNum :: [Card] -> [Int] -> ([Int], [Int], Integer)
 decodeEncodeNum cs ws =
-    let (n, ws') = decodeNum cs ws
-        (ws2, n') = encodeNum cs n in
+    let (n, ws') = VB.decodeNum cs ws
+        (ws2, n') = VB.encodeNum cs n in
         (ws2, ws', n')
+
+cardWordsGen :: [Card] -> Gen [Int]
+cardWordsGen = mapM (\c -> choose (0, fromIntegral c-1))
+
+prop_encode_decode_num_id :: Property
+prop_encode_decode_num_id =
+    forAll cardGen $ \cs ->
+        forAll (cardWordsGen cs) $ \ws ->
+            decodeEncodeNum cs ws `shouldBe` (ws, [], 0)
 
 encodeDecode :: [Card] -> [Word8] -> ([Word8], [Word8], [Int])
 encodeDecode cs bs =
-    let (ws, bs') = encode cs bs
-        (bs2, ws') = decode cs ws in
+    let (ws, bs') = VB.encode cs bs
+        (bs2, ws') = VB.decode cs ws in
         (bs2, bs', ws')
+
+cardBytesGen :: [Card] -> Gen [Word8]
+cardBytesGen cs =
+    let maxBytes = round $ sum (map cardEntropy cs) in
+        do
+            size <- choose (1, maxBytes)
+            vector size
+
+prop_decode_encode_id :: Property
+prop_decode_encode_id =
+    forAll cardGen $ \cs ->
+        forAll (cardBytesGen cs) $ \bs ->
+            encodeDecode cs bs `shouldBe` (bs, [0], [])
 
 decodeEncode :: [Card] -> [Int] -> ([Int], [Int], [Word8])
 decodeEncode cs ws =
-    let (bs, ws') = decode cs ws
-        (ws2, bs') = encode cs bs in
+    let (bs, ws') = VB.decode cs ws
+        (ws2, bs') = VB.encode cs bs in
         (ws2, ws', bs')
 
--- TODO: this is an obvious candidate for quickcheck testing;
--- just need to make sure that data generated fits within the cardinalities generated
--- should also test leftover data in some way (not sure what the actual
--- properties are; maybe just make sure decode(encode) results in a prefix?)
+prop_encode_decode_id :: Property
+prop_encode_decode_id =
+    forAll cardGen $ \cs ->
+        forAll (cardWordsGen cs) $ \ws ->
+            decodeEncode cs ws `shouldBe` (ws, [], [0])
+
+-- TODO: test partial input/cardinalities better
 encdecSpec :: Spec
 encdecSpec = do
     describe "variable-base encoder/decoder" $ do
         describe "to numbers" $ do
-            it "encode(decode) = id" $ do
+            it "encode(decode) = id example" $ do
                 cs <- return [3,4,6,2]
                 ws <- return [2,0,3,1]
                 decodeEncodeNum cs ws `shouldBe` (ws, [], 0)
-            it "decode(encode) = id" $ do
+            it "encode(decode) = id prop" $ do
+                prop_decode_encode_num_id
+            it "decode(encode) = id example" $ do
                 cs <- return [3,4,6,2]
                 n <- return 102
                 -- sanity check on constant
-                n `shouldSatisfy` (< (fromIntegral $ product cs))
+                n `shouldSatisfy` (< product (map fromIntegral cs))
                 encodeDecodeNum cs n `shouldBe` (n, 0, [])
+            it "decode(encode) = id prop" $ do
+                prop_encode_decode_num_id
+        describe "to bytes" $ do
+            it "encode(decode) = id" $ do
+                prop_decode_encode_id
+            it "decode(encode) = id" $ do
+                prop_encode_decode_id
 
 parseWordListSpec :: Spec
 parseWordListSpec = do

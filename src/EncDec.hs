@@ -7,6 +7,7 @@ module EncDec (
     , DecodeError(..)
     , decode
 
+    , cardEntropy
     , entropyBytes
 ) where
 
@@ -51,12 +52,12 @@ getWords t =
 
 -- this could be length <$> getWords db t, but we can implement this without a
 -- context
-typeCard :: Type -> DbMonad Int
+typeCard :: Type -> DbMonad VB.Card
 typeCard t =
     case t of
         Reference n -> return 1
-        OneOf ws -> return $ length ws
-        _ -> length <$> wordsForType t
+        OneOf ws -> fromIntegral . length <$> return ws
+        _ -> fromIntegral . length <$> wordsForType t
 
 addBinding :: Name -> String -> CtxM ()
 addBinding n s = modify (Map.insert n s)
@@ -88,12 +89,13 @@ cardinalities = mapM card
               card (Placeholder ph) = typeCard (placeholderType ph)
               card _ = return 1
 
+cardEntropy :: VB.Card -> Double
+cardEntropy c = logBase 256 (fromIntegral c)
+
 entropyBytes :: WordList -> Document -> Double
 entropyBytes db d = runReader entropyM db
         where entropyM :: DbMonad Double
               entropyM = sum <$> (map cardEntropy <$> cardinalities d)
-              cardEntropy :: Int -> Double
-              cardEntropy c = logBase 256 (fromIntegral c)
 
 runCtxM :: CtxM a -> WordList -> a
 runCtxM m db = evalState (runReaderT m db) Map.empty
