@@ -149,22 +149,22 @@ encdecSpec = do
                 n `shouldSatisfy` (< (fromIntegral $ product cs))
                 encodeDecodeNum cs n `shouldBe` (n, 0, [])
 
-parseDatabaseSpec :: Spec
-parseDatabaseSpec = do
-    describe "word database parser" $ do
+parseWordListSpec :: Spec
+parseWordListSpec = do
+    describe "word list parser" $ do
         it "parses a single section" $ do
-            (database, "#verb(past)\nwent\nsat") `shouldParseTo`
+            (wordList, "#verb(past)\nwent\nsat") `shouldParseTo`
                 [Section (Verb Past) ["went", "sat"]]
         it "parses removing whitespace" $ do
-            (database, "# verb(past) \nwent \nsat\n") `shouldParseTo`
+            (wordList, "# verb(past) \nwent \nsat\n") `shouldParseTo`
                 [Section (Verb Past) ["went", "sat"]]
         it "removes empty lines" $ do
-            (database, "# verb(past) \nwent \nsat\n\n") `shouldParseTo`
+            (wordList, "# verb(past) \nwent \nsat\n\n") `shouldParseTo`
                 [Section (Verb Past) ["went", "sat"]]
         it "rejects invalid types" $ do
-            database `shouldNotParse` "# foo\n"
+            wordList `shouldNotParse` "# foo\n"
         it "parses multiple sections" $ do
-            (database, "# verb(past)\n went\n sat\n #noun\n bat\n ball") `shouldParseTo`
+            (wordList, "# verb(past)\n went\n sat\n #noun\n bat\n ball") `shouldParseTo`
                 [ Section (Verb Past) ["went", "sat"]
                 , Section Noun ["bat", "ball"]]
 
@@ -173,4 +173,4 @@ main :: IO ()
 main = hspec $ do
     parserSpec
     encdecSpec
-    parseDatabaseSpec
+    parseWordListSpec

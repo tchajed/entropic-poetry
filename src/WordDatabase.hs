@@ -1,12 +1,11 @@
 {-# LANGUAGE Rank2Types, FlexibleContexts #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module WordDatabase (
       Section(..)
-    , database -- for testing
+    , wordList -- for testing
     , WordList
     , getTypeWords
-    , parseDatabase
+    , parseWordList
     , typeWordMap
 ) where
 
@@ -38,7 +37,7 @@ typeHeader = do
 
 data Section = Section
     { secType :: Type
-    , wordList :: [String] }
+    , secWordList :: [String] }
     deriving (Eq, Show)
 
 section :: ParserT Section
@@ -48,8 +47,8 @@ section = do
     words <- filter (not . null) <$> sepBy word (char '\n')
     return $ Section t words
 
-database :: ParserT [Section]
-database = do
+wordList :: ParserT [Section]
+wordList = do
     sections <- many section
     eof
     return sections
@@ -58,13 +57,14 @@ type WordList = Map.Map Type [String]
 
 getTypeWords :: Type -> WordList -> [String]
 getTypeWords t l = Map.findWithDefault ["(" ++ show t ++ ")"] t l
+
 typeWordMap :: [Section] -> WordList
 typeWordMap ss = case ss of
     [] -> Map.empty
-    Section{..}:ss ->
+    s:ss ->
         let m = typeWordMap ss in
-            Map.insertWith (++) secType wordList m
+            Map.insertWith (++) (secType s) (secWordList s) m
 
-parseDatabase :: String -> Text -> Either ParseError WordList
-parseDatabase =
-    runParser (typeWordMap <$> database) ()
+parseWordList :: String -> Text -> Either ParseError WordList
+parseWordList =
+    runParser (typeWordMap <$> wordList) ()
