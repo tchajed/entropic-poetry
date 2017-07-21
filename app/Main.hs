@@ -3,6 +3,7 @@ module Main where
 
 import Syntax (Document)
 import Parser (parseFormat)
+import WordDatabase (parseWordList, WordList)
 import Options.Applicative
 import Data.Semigroup ((<>))
 import System.IO (withFile, IOMode(..), stdin, stdout, Handle)
@@ -40,7 +41,8 @@ data Command =
 data FileFormat = AsBase64 | AsBinary
 
 data PoetryOptions = PoetryOptions
-    { formatFilename :: String
+    { formatFilename :: FilePath
+    , wordListFilename :: FilePath
     , outputFile :: Output
     , outputFormat :: FileFormat
     , commandOpt :: Command }
@@ -59,6 +61,13 @@ parseOpts = PoetryOptions
        <> short 'f'
        <> metavar "FILENAME"
        <> help "filename for format schema")
+    <*> strOption
+        ( long "words"
+       <> short 'l'
+       <> metavar "WORDLIST"
+       <> showDefault
+       <> value "wordlist.txt"
+       <> help "categorized word list")
     <*> (outputFromStr <$> strOption
         ( long "output"
        <> short 'o'
@@ -72,8 +81,8 @@ parseOpts = PoetryOptions
        <> help "skip base64 encoding/decoding, treat data as binary")
     <*> parseCommand
 
-parseFile :: FilePath -> IO Document
-parseFile fname = do
+readFormat :: FilePath -> IO Document
+readFormat fname = do
     d <- withFile fname ReadMode $ \h ->
         parseFormat fname <$> hGetContents h
     case d of
@@ -83,10 +92,26 @@ parseFile fname = do
         exitFailure
       Right d -> return d
 
+readWordList :: FilePath -> IO WordList
+readWordList fname = do
+    wl <- withFile fname ReadMode $ \h ->
+        parseWordList fname <$> hGetContents h
+    case wl of
+        Left e -> do
+            putStrLn "could not parse word list"
+            print e
+            exitFailure
+        Right wl -> return wl
+
 mainOp :: PoetryOptions -> IO ()
-mainOp PoetryOptions{formatFilename} = do
-    d <- parseFile formatFilename
+mainOp PoetryOptions{formatFilename, wordListFilename} = do
+    d <- readFormat formatFilename
+    wl <- readWordList wordListFilename
+    putStrLn "format:"
     print d
+    putStrLn ""
+    putStrLn "word list:"
+    print wl
 
 main :: IO ()
 main = execParser opts >>= mainOp
