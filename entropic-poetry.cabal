@@ -45,6 +45,7 @@ test-suite entropic-poetry-test
   main-is:             Spec.hs
   other-modules:       ParserTesting
                      , FormatParserSpec
+                     , VarBaseSpec
   build-depends:       base
                      , entropic-poetry
                      , parsec
