@@ -3,7 +3,7 @@ module Main where
 
 import Syntax (Document)
 import Parser (parseFormat)
-import WordDatabase (parseWordList, WordList)
+import WordList (parseWordList, WordList)
 import Options.Applicative
 import Data.Semigroup ((<>))
 import System.IO (withFile, IOMode(..), stdin, stdout, Handle)

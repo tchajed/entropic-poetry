@@ -1,12 +1,13 @@
 {-# LANGUAGE Rank2Types, FlexibleContexts #-}
 
-module WordDatabase (
+module WordList (
+      -- for testing
       Section(..)
-    , wordList -- for testing
+    , wordList
+
     , WordList
     , getTypeWords
     , parseWordList
-    , typeWordMap
 ) where
 
 import Text.Parsec

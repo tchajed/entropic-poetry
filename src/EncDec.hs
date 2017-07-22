@@ -20,7 +20,7 @@ import Control.Monad (zipWithM)
 import qualified Data.ByteString as BS
 import Data.List (elemIndex, stripPrefix)
 import Data.Maybe (catMaybes, mapMaybe)
-import WordDatabase (WordList, getTypeWords)
+import WordList (WordList, getTypeWords)
 
 type Ctx = Map.Map Name String
 
@@ -50,7 +50,7 @@ getWords t =
         OneOf ws -> return ws
         _ -> wordsForType t
 
--- this could be length <$> getWords db t, but we can implement this without a
+-- this could be length <$> getWords t, but we can implement this without a
 -- context
 typeCard :: Type -> DbMonad VB.Card
 typeCard t =
@@ -90,15 +90,15 @@ cardinalities = mapM card
               card _ = return 1
 
 entropyBytes :: WordList -> Document -> Double
-entropyBytes db d = runReader entropyM db
+entropyBytes wl d = runReader entropyM wl
         where entropyM :: DbMonad Double
               entropyM = sum <$> (map VB.cardEntropy <$> cardinalities d)
 
 runCtxM :: CtxM a -> WordList -> a
-runCtxM m db = evalState (runReaderT m db) Map.empty
+runCtxM m wl = evalState (runReaderT m wl) Map.empty
 
 encode :: WordList -> Document -> BS.ByteString -> (String, [VB.Word8])
-encode db fmt d = runCtxM encodeM db
+encode wl fmt d = runCtxM encodeM wl
     where encodeM :: CtxM (String, [VB.Word8])
           encodeM = do
             cs <- cardinalities fmt
@@ -154,7 +154,7 @@ decodeDocumentData d s = do
             else return (bytes, s)
 
 runCtxMT :: Monad m => CtxMT m a -> WordList -> m a
-runCtxMT m db = evalStateT (runReaderT m db) Map.empty
+runCtxMT m wl = evalStateT (runReaderT m wl) Map.empty
 
 data DecodeError =
     NoParse
@@ -166,13 +166,13 @@ completeParse :: (a, Input) -> Maybe a
 completeParse (x, s) = if null s then Just x else Nothing
 
 decode :: WordList -> Document -> String -> Either DecodeError BS.ByteString
-decode db d s =
-    let parses = runCtxMT (decodeDocumentData d s) db
+decode wl d s =
+    let parses = runCtxMT (decodeDocumentData d s) wl
         completeParses = BS.pack <$> mapMaybe completeParse parses in
         case parses of
             [(p, s)] | s /= [] -> Left $ IncompleteParse s
             _ -> case completeParses of
                 [] -> Left NoParse
-                [p] -> let numBytes = floor (entropyBytes db d) in
+                [p] -> let numBytes = floor (entropyBytes wl d) in
                           Right (BS.take numBytes p)
                 _ -> Left $ AmbiguousParse completeParses

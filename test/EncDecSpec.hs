@@ -4,7 +4,7 @@ module EncDecSpec where
 import EncDec
 import Parser (parseFormat)
 import Syntax
-import WordDatabase (WordList)
+import WordList (WordList)
 
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
@@ -16,8 +16,8 @@ import Test.QuickCheck
 {-# ANN module ("HLint: ignore Redundant do" :: String) #-}
 {-# ANN module ("HLint: ignore Use let" :: String) #-}
 
-testDatabase :: WordList
-testDatabase = Map.fromList
+testWordList :: WordList
+testWordList = Map.fromList
     [  (Verb Past, [
         "went"
       , "sat"
@@ -65,12 +65,12 @@ testFormat2 = fmtLit "{name:verb(past)} {verb(past)} {verb(participle)} \
 
 prop_encode_decode_fmt :: Document -> Property
 prop_encode_decode_fmt fmt =
-    let db = testDatabase
-        numBytes = floor (entropyBytes db fmt) in
+    let wl = testWordList
+        numBytes = floor (entropyBytes wl fmt) in
             forAll (BS.pack <$> vector numBytes) $ \bs ->
-                let (s, bs') = encode db fmt bs in do
+                let (s, bs') = encode wl fmt bs in do
                     bs' `shouldBe` []
-                    decode db fmt s `shouldBe` Right bs
+                    decode wl fmt s `shouldBe` Right bs
 
 spec :: Spec
 spec = do

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module WordListParserSpec where
 
-import WordDatabase
+import WordList
 import Syntax
 
 import Test.Hspec
