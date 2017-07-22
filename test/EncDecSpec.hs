@@ -48,22 +48,22 @@ testWordList = Map.fromList
       , "into"
     ]) ]
 
-fmtLit :: T.Text -> Document
+fmtLit :: T.Text -> Format
 fmtLit s = case parseFormat "(literal)" s of
     Left e -> error (show e)
-    Right d -> d
+    Right fmt -> fmt
 
-testFormat1 :: Document
+testFormat1 :: Format
 testFormat1 = fmtLit "The child {verb(past)} a {noun} \
 \and wanted to {verb(infinitive)} {preposition} a {noun}."
 
-testFormat2 :: Document
+testFormat2 :: Format
 testFormat2 = fmtLit "{name:verb(past)} {verb(past)} {verb(participle)} \
 \<separator> {name2:noun} {?name} {preposition} {?name2} {noun} {verb(infinitive)} \
 \{verb(participle)} {choice:oneof(a,b,c,d)} {?choice} {noun} {noun} \
 \{a:noun} {b:?a} {?b} {oneof($,%)} {oneof(#,@)}."
 
-prop_encode_decode_fmt :: Document -> Property
+prop_encode_decode_fmt :: Format -> Property
 prop_encode_decode_fmt fmt =
     let wl = testWordList
         numBytes = floor (entropyBytes wl fmt) in

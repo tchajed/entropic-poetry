@@ -80,24 +80,24 @@ encodeToken t w =
         Literal s -> return s
         Placeholder ph -> encodeWord ph w
 
-encodeWords :: Document -> [Int] -> CtxM String
-encodeWords d ws = concat <$> zipWithM encodeToken d ws
+encodeWords :: Format -> [Int] -> CtxM String
+encodeWords fmt ws = concat <$> zipWithM encodeToken fmt ws
 
-cardinalities :: Document -> DbMonad [VB.Card]
+cardinalities :: Format -> DbMonad [VB.Card]
 cardinalities = mapM card
         where card :: Token -> DbMonad VB.Card
               card (Placeholder ph) = typeCard (placeholderType ph)
               card _ = return 1
 
-entropyBytes :: WordList -> Document -> Double
-entropyBytes wl d = runReader entropyM wl
+entropyBytes :: WordList -> Format -> Double
+entropyBytes wl fmt = runReader entropyM wl
         where entropyM :: DbMonad Double
-              entropyM = sum <$> (map VB.cardEntropy <$> cardinalities d)
+              entropyM = sum <$> (map VB.cardEntropy <$> cardinalities fmt)
 
 runCtxM :: CtxM a -> WordList -> a
 runCtxM m wl = evalState (runReaderT m wl) Map.empty
 
-encode :: WordList -> Document -> BS.ByteString -> (String, [VB.Word8])
+encode :: WordList -> Format -> BS.ByteString -> (String, [VB.Word8])
 encode wl fmt d = runCtxM encodeM wl
     where encodeM :: CtxM (String, [VB.Word8])
           encodeM = do
@@ -135,19 +135,19 @@ decodeToken t s = case t of
     Literal ls -> decodePlaceholder (PlainType (OneOf [ls])) s
     Placeholder ph -> decodePlaceholder ph s
 
-decodeDocument :: Document -> Input -> CtxMT [] ([Int], Input)
-decodeDocument d s =
-    case d of
+decodeFormat :: Format -> Input -> CtxMT [] ([Int], Input)
+decodeFormat ts s =
+    case ts of
         [] -> return ([], s)
-        t:d' -> do
+        t:ts' -> do
             (i, s) <- decodeToken t s
-            (is, s) <- decodeDocument d' s
+            (is, s) <- decodeFormat ts' s
             return (i:is, s)
 
-decodeDocumentData :: Document -> Input -> CtxMT [] ([VB.Word8], Input)
-decodeDocumentData d s = do
-    cards <- cardinalities d
-    (ws, s) <- decodeDocument d s
+decodeFormatData :: Format -> Input -> CtxMT [] ([VB.Word8], Input)
+decodeFormatData fmt s = do
+    cards <- cardinalities fmt
+    (ws, s) <- decodeFormat fmt s
     let (bytes, ws') = VB.decode cards ws in
         if ws' /= []
             then liftPossibilities []
@@ -165,14 +165,14 @@ data DecodeError =
 completeParse :: (a, Input) -> Maybe a
 completeParse (x, s) = if null s then Just x else Nothing
 
-decode :: WordList -> Document -> String -> Either DecodeError BS.ByteString
-decode wl d s =
-    let parses = runCtxMT (decodeDocumentData d s) wl
+decode :: WordList -> Format -> String -> Either DecodeError BS.ByteString
+decode wl fmt s =
+    let parses = runCtxMT (decodeFormatData fmt s) wl
         completeParses = BS.pack <$> mapMaybe completeParse parses in
         case parses of
             [(p, s)] | s /= [] -> Left $ IncompleteParse s
             _ -> case completeParses of
                 [] -> Left NoParse
-                [p] -> let numBytes = floor (entropyBytes wl d) in
+                [p] -> let numBytes = floor (entropyBytes wl fmt) in
                           Right (BS.take numBytes p)
                 _ -> Left $ AmbiguousParse completeParses

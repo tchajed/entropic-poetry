@@ -74,26 +74,26 @@ spec = do
         it "should parse bound reference" $ do
             (placeholder, "{name2:?name}") `shouldParseTo`
                 Binding (Name "name2") (Reference (Name "name"))
-    describe "document" $ do
+    describe "format" $ do
         noun <- return $ Placeholder (PlainType Noun)
         it "should parse just literal" $ do
-            (document, "foobar") `shouldParseTo` [Literal "foobar"]
+            (format, "foobar") `shouldParseTo` [Literal "foobar"]
         it "should parse literal and placeholder" $ do
-            (document, "foobar {noun}") `shouldParseTo`
+            (format, "foobar {noun}") `shouldParseTo`
                 [Literal "foobar ", noun]
         it "should parse placeholders and literals" $ do
-            (document, "{noun} foobar {noun} text") `shouldParseTo`
+            (format, "{noun} foobar {noun} text") `shouldParseTo`
                 [noun, Literal " foobar ", noun, Literal " text"]
         it "should ignore comments" $ do
-            (document, "# comment\nfoobar {noun}") `shouldParseTo`
+            (format, "# comment\nfoobar {noun}") `shouldParseTo`
                 -- TODO: the comment should really have the newline
                 [Comment " comment", Literal "foobar ", noun]
         it "should preserve newlines" $ do
-            (document, "some\ntext{noun}\nhere") `shouldParseTo`
+            (format, "some\ntext{noun}\nhere") `shouldParseTo`
                 [Literal "some\ntext", noun, Literal "\nhere"]
         it "should consume a single newline after a comment" $ do
-            (document, "# comment\n\nfoobar {noun}") `shouldParseTo`
+            (format, "# comment\n\nfoobar {noun}") `shouldParseTo`
                 [Comment " comment", Literal "\nfoobar ", noun]
         it "should parse adjacent placeholders" $ do
-            (document, "{noun}{verb(past)}") `shouldParseTo`
+            (format, "{noun}{verb(past)}") `shouldParseTo`
                 [noun, Placeholder (PlainType (Verb Past))]

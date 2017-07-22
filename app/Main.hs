@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Main where
 
-import Syntax (Document)
+import Syntax (Format)
 import Parser (parseFormat)
 import WordList (parseWordList, WordList)
 import Options.Applicative
@@ -81,16 +81,16 @@ parseOpts = PoetryOptions
        <> help "skip base64 encoding/decoding, treat data as binary")
     <*> parseCommand
 
-readFormat :: FilePath -> IO Document
+readFormat :: FilePath -> IO Format
 readFormat fname = do
-    d <- withFile fname ReadMode $ \h ->
+    fmt <- withFile fname ReadMode $ \h ->
         parseFormat fname <$> hGetContents h
-    case d of
+    case fmt of
       Left e -> do
         putStrLn "could not parse format"
         print e
         exitFailure
-      Right d -> return d
+      Right fmt -> return fmt
 
 readWordList :: FilePath -> IO WordList
 readWordList fname = do
@@ -105,10 +105,10 @@ readWordList fname = do
 
 mainOp :: PoetryOptions -> IO ()
 mainOp PoetryOptions{formatFilename, wordListFilename} = do
-    d <- readFormat formatFilename
+    fmt <- readFormat formatFilename
     wl <- readWordList wordListFilename
     putStrLn "format:"
-    print d
+    print fmt
     putStrLn ""
     putStrLn "word list:"
     print wl

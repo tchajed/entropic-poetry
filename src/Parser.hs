@@ -64,9 +64,9 @@ tokenP = choice [
     , Literal <$> manyTill anyChar (void (try (lookAhead placeholder)) <|> eof)
     ]
 
-document :: ParserT Document
-document = manyTill tokenP eof
+format :: ParserT Format
+format = manyTill tokenP eof
 
 -- String is used as a filename
-parseFormat :: String -> Text -> Either ParseError Document
-parseFormat = runParser document ()
+parseFormat :: String -> Text -> Either ParseError Format
+parseFormat = runParser format ()
