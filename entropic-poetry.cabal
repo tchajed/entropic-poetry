@@ -43,6 +43,8 @@ test-suite entropic-poetry-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
+  other-modules:       ParserTesting
+                     , FormatParserSpec
   build-depends:       base
                      , entropic-poetry
                      , parsec
