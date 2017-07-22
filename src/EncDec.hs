@@ -7,7 +7,7 @@ module EncDec (
     , DecodeError(..)
     , decode
 
-    , cardEntropy
+    , VB.cardEntropy
     , entropyBytes
 ) where
 
@@ -89,13 +89,10 @@ cardinalities = mapM card
               card (Placeholder ph) = typeCard (placeholderType ph)
               card _ = return 1
 
-cardEntropy :: VB.Card -> Double
-cardEntropy c = logBase 256 (fromIntegral c)
-
 entropyBytes :: WordList -> Document -> Double
 entropyBytes db d = runReader entropyM db
         where entropyM :: DbMonad Double
-              entropyM = sum <$> (map cardEntropy <$> cardinalities d)
+              entropyM = sum <$> (map VB.cardEntropy <$> cardinalities d)
 
 runCtxM :: CtxM a -> WordList -> a
 runCtxM m db = evalState (runReaderT m db) Map.empty
