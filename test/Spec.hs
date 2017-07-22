@@ -158,7 +158,7 @@ prop_encode_decode_id =
     forAll cardGen $ \cs ->
         forAll (cardBytesGen cs) $ \bs ->
             let (bs2, _, ws') = encodeDecode cs bs in
-                (bs2, ws') `shouldBe` (bs, [])
+                (take (VB.numBytes cs) bs2, ws') `shouldBe` (bs, [])
 
 decodeEncode :: [Card] -> [Int] -> ([Int], [Int], [Word8])
 decodeEncode cs ws =
