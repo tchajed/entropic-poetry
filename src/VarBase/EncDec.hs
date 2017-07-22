@@ -62,9 +62,6 @@ trimTo = take
 encode :: [Card] -> [Word8] -> ([Int], [Word8])
 encode cs bytes =
     let bs = padTo (numBytes cs) bytes
-        -- can't run out of cardinalities
-        (n, _) = decodeNum (byteCards $ numBytes' cs) (map fromIntegral bs)
-        (ws, n') = encodeNum cs n
-        -- we need to encode the leftover bytes
-        (bs', _) = encodeNum [256,256..] n' in
-        (ws, trimTo (numBytes cs) (map fromIntegral bs'))
+        (n, bs') = decodeNum (byteCards $ numBytes' cs) (map fromIntegral bs)
+        (ws, _) = encodeNum cs n in
+        (ws, map fromIntegral bs')

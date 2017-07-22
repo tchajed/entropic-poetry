@@ -29,4 +29,5 @@ data Token =
     | Placeholder Placeholder
     deriving (Eq, Show)
 
+-- TODO: need to rename this (perhaps Format)
 type Document = [Token]

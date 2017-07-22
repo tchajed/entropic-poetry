@@ -97,13 +97,15 @@ entropyBytes db d = runReader entropyM db
 runCtxM :: CtxM a -> WordList -> a
 runCtxM m db = evalState (runReaderT m db) Map.empty
 
-encode :: WordList -> Document -> BS.ByteString -> String
+encode :: WordList -> Document -> BS.ByteString -> (String, [VB.Word8])
 encode db fmt d = runCtxM encodeM db
-    where encodeM :: CtxM String
+    where encodeM :: CtxM (String, [VB.Word8])
           encodeM = do
             cs <- cardinalities fmt
             let (ws, d') = VB.encode cs (BS.unpack d) in
-                encodeWords fmt (ws ++ [0,0..])
+                do
+                    encoded <- encodeWords fmt (ws ++ [0,0..])
+                    return (encoded, d')
 
 -- abbreviation to annotate input stream in type signatures
 type Input = String
@@ -113,12 +115,12 @@ type Input = String
 decodeType :: Type -> Input -> CtxMT [] (String, Int, Input)
 decodeType t s = do
     ws <- getWords t
-    let parse i w = do
+    let possibleParses = catMaybes $ zipWith parse [0..] ws in
+        liftPossibilities possibleParses
+    where parse :: Int -> String -> Maybe (String, Int, Input)
+          parse i w = do
             rest <- stripPrefix w s
             return (w, i, rest :: Input)
-        possibleParses = catMaybes $ zipWith parse [0..] ws in
-        -- inserting this lift was really difficult
-        liftPossibilities possibleParses
 
 decodePlaceholder :: Placeholder -> Input -> CtxMT [] (Int, Input)
 decodePlaceholder ph s = do
@@ -130,7 +132,7 @@ decodePlaceholder ph s = do
 decodeToken :: Token -> Input -> CtxMT [] (Int, Input)
 decodeToken t s = case t of
     Comment _ -> return (0, s)
-    Literal s -> decodePlaceholder (PlainType (OneOf [s])) s
+    Literal ls -> decodePlaceholder (PlainType (OneOf [ls])) s
     Placeholder ph -> decodePlaceholder ph s
 
 decodeDocument :: Document -> Input -> CtxMT [] ([Int], Input)
@@ -171,5 +173,6 @@ decode db d s =
             [(p, s)] | s /= [] -> Left $ IncompleteParse s
             _ -> case completeParses of
                 [] -> Left NoParse
-                [p] -> Right p
+                [p] -> let numBytes = floor (entropyBytes db d) in
+                          Right (BS.take numBytes p)
                 _ -> Left $ AmbiguousParse completeParses
