@@ -122,9 +122,8 @@ encodeDecodeNum cs n =
 cardNumGen :: [Card] -> Gen Integer
 cardNumGen cs = choose (0, product (map fromIntegral cs) - 1)
 
--- TODO: standardize on diagrammatic order for names
-prop_decode_encode_num_id :: Property
-prop_decode_encode_num_id =
+prop_encode_decode_num_id :: Property
+prop_encode_decode_num_id =
     forAll cardGen $ \cs ->
         forAll (cardNumGen cs) $ \n ->
             encodeDecodeNum cs n `shouldBe` (n, 0, [])
@@ -138,8 +137,8 @@ decodeEncodeNum cs ws =
 cardWordsGen :: [Card] -> Gen [Int]
 cardWordsGen = mapM (\c -> choose (0, fromIntegral c-1))
 
-prop_encode_decode_num_id :: Property
-prop_encode_decode_num_id =
+prop_decode_encode_num_id :: Property
+prop_decode_encode_num_id =
     forAll cardGen $ \cs ->
         forAll (cardWordsGen cs) $ \ws ->
             decodeEncodeNum cs ws `shouldBe` (ws, [], 0)
@@ -154,12 +153,12 @@ cardBytesGen :: [Card] -> Gen [Word8]
 cardBytesGen cs =
     vector (VB.numBytes cs)
 
-prop_decode_encode_id :: Property
-prop_decode_encode_id =
+prop_encode_decode_id :: Property
+prop_encode_decode_id =
     forAll cardGen $ \cs ->
         forAll (cardBytesGen cs) $ \bs ->
-            let (bs', _, ws') = encodeDecode cs bs in
-                (bs', ws') `shouldBe` (bs, [])
+            let (bs2, _, ws') = encodeDecode cs bs in
+                (bs2, ws') `shouldBe` (bs, [])
 
 decodeEncode :: [Card] -> [Int] -> ([Int], [Int], [Word8])
 decodeEncode cs ws =
@@ -167,36 +166,37 @@ decodeEncode cs ws =
         (ws2, bs') = VB.encode cs bs in
         (ws2, ws', bs')
 
-prop_encode_decode_id :: Property
-prop_encode_decode_id =
+prop_decode_encode_id :: Property
+prop_decode_encode_id =
     forAll cardGen $ \cs ->
         forAll (cardWordsGen cs) $ \ws ->
-            decodeEncode cs ws `shouldBe` (ws, [], [0])
+            let (ws2, ws', _) = decodeEncode cs ws in
+                (ws2, ws') `shouldBe` (ws, [])
 
 -- TODO: test partial input/cardinalities better
 encdecSpec :: Spec
 encdecSpec = do
     describe "variable-base encoder/decoder" $ do
         describe "to numbers" $ do
-            it "encode(decode) = id example" $ do
+            it "decode >>> encode = id example" $ do
                 cs <- return [3,4,6,2]
                 ws <- return [2,0,3,1]
                 decodeEncodeNum cs ws `shouldBe` (ws, [], 0)
-            it "encode(decode) = id prop" $ do
+            it "decode >>> encode = id prop" $ do
                 prop_decode_encode_num_id
-            it "decode(encode) = id example" $ do
+            it "encode >> decode = id example" $ do
                 cs <- return [3,4,6,2]
                 n <- return 102
                 -- sanity check on constant
                 n `shouldSatisfy` (< product (map fromIntegral cs))
                 encodeDecodeNum cs n `shouldBe` (n, 0, [])
-            it "decode(encode) = id prop" $ do
+            it "encode >>> decode = id prop" $ do
                 prop_encode_decode_num_id
         describe "to bytes" $ do
-            it "encode(decode) = id" $ do
+            it "decode >>> encode = id" $ do
                 prop_decode_encode_id
-            -- it "decode(encode) = id" $ do
-            --     prop_encode_decode_id
+            it "encode >>> decode = id" $ do
+                prop_encode_decode_id
 
 parseWordListSpec :: Spec
 parseWordListSpec = do
