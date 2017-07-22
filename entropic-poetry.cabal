@@ -46,6 +46,7 @@ test-suite entropic-poetry-test
   other-modules:       ParserTesting
                      , FormatParserSpec
                      , VarBaseSpec
+                     , WordListParserSpec
   build-depends:       base
                      , entropic-poetry
                      , parsec

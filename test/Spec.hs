@@ -19,25 +19,6 @@ import Control.Monad.Identity (Identity)
 {-# ANN module ("HLint: ignore Redundant do" :: String) #-}
 {-# ANN module ("HLint: ignore Use let" :: String) #-}
 
-parseWordListSpec :: Spec
-parseWordListSpec = do
-    describe "word list parser" $ do
-        it "parses a single section" $ do
-            (wordList, "#verb(past)\nwent\nsat") `shouldParseTo`
-                [Section (Verb Past) ["went", "sat"]]
-        it "parses removing whitespace" $ do
-            (wordList, "# verb(past) \nwent \nsat\n") `shouldParseTo`
-                [Section (Verb Past) ["went", "sat"]]
-        it "removes empty lines" $ do
-            (wordList, "# verb(past) \nwent \nsat\n\n") `shouldParseTo`
-                [Section (Verb Past) ["went", "sat"]]
-        it "rejects invalid types" $ do
-            wordList `shouldNotParse` "# foo\n"
-        it "parses multiple sections" $ do
-            (wordList, "# verb(past)\n went\n sat\n #noun\n bat\n ball") `shouldParseTo`
-                [ Section (Verb Past) ["went", "sat"]
-                , Section Noun ["bat", "ball"]]
-
 testDatabase :: WordList
 testDatabase = Map.fromList
     [  (Verb Past, [
@@ -104,5 +85,4 @@ encodePoemSpec = do
 
 spec :: Spec
 spec = do
-    parseWordListSpec
     encodePoemSpec
