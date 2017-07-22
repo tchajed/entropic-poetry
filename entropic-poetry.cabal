@@ -47,6 +47,7 @@ test-suite entropic-poetry-test
                      , FormatParserSpec
                      , VarBaseSpec
                      , WordListParserSpec
+                     , EncDecSpec
   build-depends:       base
                      , entropic-poetry
                      , parsec
