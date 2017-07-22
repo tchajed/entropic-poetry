@@ -12,7 +12,7 @@ module EncDec (
 ) where
 
 import Syntax
-import qualified VarBase.EncDec as VB
+import qualified VarBase as VB
 import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
 import Control.Monad.Reader

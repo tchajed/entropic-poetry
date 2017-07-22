@@ -17,7 +17,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Syntax
                      , Parser
-                     , VarBase.EncDec
+                     , VarBase
                      , EncDec
                      , WordDatabase
                      , Lib

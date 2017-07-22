@@ -1,8 +1,8 @@
 {-# LANGUAGE Rank2Types, FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 import Lib
-import VarBase.EncDec (Card, Word8)
-import qualified VarBase.EncDec as VB
+import VarBase (Card, Word8)
+import qualified VarBase as VB
 import WordDatabase
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map

@@ -1,4 +1,4 @@
-module VarBase.EncDec (
+module VarBase (
       Card
     , Word8
     , decodeNum
