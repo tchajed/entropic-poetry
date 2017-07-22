@@ -53,7 +53,6 @@ decode cs ws =
         (bytes, _) = encodeNum (byteCards $ numBytes' cs) n in
         (map fromIntegral bytes, ws')
 
--- note that padding and trimming are prefix pad/trim
 padTo :: Int -> [Word8] -> [Word8]
 padTo len bs =  bs ++ replicate (len - length bs) 0
 

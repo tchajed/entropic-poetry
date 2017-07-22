@@ -110,6 +110,7 @@ parserSpec =
                 (document, "{noun}{verb(past)}") `shouldParseTo`
                     [noun, Placeholder (PlainType (Verb Past))]
 
+-- |Generate a list of cardinalities.
 cardGen :: Gen [Card]
 cardGen = listOf1 (choose (1, 2048))
 
@@ -119,14 +120,9 @@ encodeDecodeNum cs n =
         (n2, ws') = VB.decodeNum cs ws in
         (n2, n', ws')
 
+-- |Generate a number that fits in a list of cardinalities.
 cardNumGen :: [Card] -> Gen Integer
 cardNumGen cs = choose (0, product (map fromIntegral cs) - 1)
-
-prop_encode_decode_num_id :: Property
-prop_encode_decode_num_id =
-    forAll cardGen $ \cs ->
-        forAll (cardNumGen cs) $ \n ->
-            encodeDecodeNum cs n `shouldBe` (n, 0, [])
 
 decodeEncodeNum :: [Card] -> [Int] -> ([Int], [Int], Integer)
 decodeEncodeNum cs ws =
@@ -134,31 +130,16 @@ decodeEncodeNum cs ws =
         (ws2, n') = VB.encodeNum cs n in
         (ws2, ws', n')
 
-cardWordsGen :: [Card] -> Gen [Int]
-cardWordsGen = mapM (\c -> choose (0, fromIntegral c-1))
-
-prop_decode_encode_num_id :: Property
-prop_decode_encode_num_id =
-    forAll cardGen $ \cs ->
-        forAll (cardWordsGen cs) $ \ws ->
-            decodeEncodeNum cs ws `shouldBe` (ws, [], 0)
-
 encodeDecode :: [Card] -> [Word8] -> ([Word8], [Word8], [Int])
 encodeDecode cs bs =
     let (ws, bs') = VB.encode cs bs
         (bs2, ws') = VB.decode cs ws in
         (bs2, bs', ws')
 
+-- |Generate bytes that fit in a list of cardinalities.
 cardBytesGen :: [Card] -> Gen [Word8]
 cardBytesGen cs =
     vector (VB.numBytes cs)
-
-prop_encode_decode_id :: Property
-prop_encode_decode_id =
-    forAll cardGen $ \cs ->
-        forAll (cardBytesGen cs) $ \bs ->
-            let (bs2, _, ws') = encodeDecode cs bs in
-                (take (VB.numBytes cs) bs2, ws') `shouldBe` (bs, [])
 
 decodeEncode :: [Card] -> [Int] -> ([Int], [Int], [Word8])
 decodeEncode cs ws =
@@ -166,12 +147,9 @@ decodeEncode cs ws =
         (ws2, bs') = VB.encode cs bs in
         (ws2, ws', bs')
 
-prop_decode_encode_id :: Property
-prop_decode_encode_id =
-    forAll cardGen $ \cs ->
-        forAll (cardWordsGen cs) $ \ws ->
-            let (ws2, ws', _) = decodeEncode cs ws in
-                (ws2, ws') `shouldBe` (ws, [])
+-- |Generate words corresponding to cardinalities.
+cardWordsGen :: [Card] -> Gen [Int]
+cardWordsGen = mapM (\c -> choose (0, fromIntegral c-1))
 
 -- TODO: test partial input/cardinalities better
 encdecSpec :: Spec
@@ -183,20 +161,30 @@ encdecSpec = do
                 ws <- return [2,0,3,1]
                 decodeEncodeNum cs ws `shouldBe` (ws, [], 0)
             it "decode >>> encode = id prop" $ do
-                prop_decode_encode_num_id
-            it "encode >> decode = id example" $ do
+                forAll cardGen $ \cs ->
+                    forAll (cardWordsGen cs) $ \ws ->
+                        decodeEncodeNum cs ws `shouldBe` (ws, [], 0)
+            it "encode >>> decode = id example" $ do
                 cs <- return [3,4,6,2]
                 n <- return 102
                 -- sanity check on constant
                 n `shouldSatisfy` (< product (map fromIntegral cs))
                 encodeDecodeNum cs n `shouldBe` (n, 0, [])
             it "encode >>> decode = id prop" $ do
-                prop_encode_decode_num_id
+                forAll cardGen $ \cs ->
+                    forAll (cardNumGen cs) $ \n ->
+                        encodeDecodeNum cs n `shouldBe` (n, 0, [])
         describe "to bytes" $ do
             it "decode >>> encode = id" $ do
-                prop_decode_encode_id
+                forAll cardGen $ \cs ->
+                    forAll (cardWordsGen cs) $ \ws ->
+                        let (ws2, ws', _) = decodeEncode cs ws in
+                            (ws2, ws') `shouldBe` (ws, [])
             it "encode >>> decode = id" $ do
-                prop_encode_decode_id
+                forAll cardGen $ \cs ->
+                    forAll (cardBytesGen cs) $ \bs ->
+                        let (bs2, _, ws') = encodeDecode cs bs in
+                            (take (VB.numBytes cs) bs2, ws') `shouldBe` (bs, [])
 
 parseWordListSpec :: Spec
 parseWordListSpec = do
