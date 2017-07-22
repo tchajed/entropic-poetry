@@ -53,21 +53,11 @@ cardWordsGen = mapM (\c -> choose (0, fromIntegral c-1))
 spec :: Spec
 spec = do
     describe "encoding/decoding to numbers" $ do
-        it "decode >>> encode = id example" $ do
-            cs <- return [3,4,6,2]
-            ws <- return [2,0,3,1]
-            decodeEncodeNum cs ws `shouldBe` (ws, [], 0)
-        it "decode >>> encode = id prop" $ do
+        it "decode >>> encode = id" $ do
             forAll cardGen $ \cs ->
                 forAll (cardWordsGen cs) $ \ws ->
                     decodeEncodeNum cs ws `shouldBe` (ws, [], 0)
-        it "encode >>> decode = id example" $ do
-            cs <- return [3,4,6,2]
-            n <- return 102
-            -- sanity check on constant
-            n `shouldSatisfy` (< product (map fromIntegral cs))
-            encodeDecodeNum cs n `shouldBe` (n, 0, [])
-        it "encode >>> decode = id prop" $ do
+        it "encode >>> decode = id" $ do
             forAll cardGen $ \cs ->
                 forAll (cardNumGen cs) $ \n ->
                     encodeDecodeNum cs n `shouldBe` (n, 0, [])
