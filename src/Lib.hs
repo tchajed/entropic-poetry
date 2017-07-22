@@ -1,9 +1,9 @@
-module Lib (
-    module Syntax
+module Lib
+  ( module Syntax
   , module Parser
   , module EncDec
-) where
+  ) where
 
-import Syntax
-import Parser
 import EncDec
+import Parser
+import Syntax

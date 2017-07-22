@@ -1,25 +1,26 @@
 {-# LANGUAGE Rank2Types, FlexibleContexts #-}
 
-module WordList (
+module WordList
       -- for testing
-      Section(..)
-    , wordList
+  ( Section(..)
+  , wordList
+  , WordList
+  , getTypeWords
+  , parseWordList
+  ) where
 
-    , WordList
-    , getTypeWords
-    , parseWordList
-) where
-
-import Text.Parsec
+import Control.Monad (void)
+import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import Syntax
-import qualified Data.Map.Strict as Map
-import Control.Monad (void)
+import Text.Parsec
 
-type ParserT a = forall m s. Stream s m Char => ParsecT s () m a
+type ParserT a = forall m s. Stream s m Char =>
+                               ParsecT s () m a
 
 word :: ParserT String
-word = between (many (oneOf " \t")) (many (oneOf " \t")) (many (noneOf " \t#\n"))
+word =
+  between (many (oneOf " \t")) (many (oneOf " \t")) (many (noneOf " \t#\n"))
 
 parseType :: String -> Maybe Type
 parseType "verb(past)" = Just $ Verb Past
@@ -31,28 +32,28 @@ parseType _ = Nothing
 
 typeHeader :: ParserT Type
 typeHeader = do
-    name <- char '#' >> word
-    case parseType name of
-        Just t -> return t
-        Nothing -> unexpected ("type name: " ++ name)
+  name <- char '#' >> word
+  case parseType name of
+    Just t -> return t
+    Nothing -> unexpected ("type name: " ++ name)
 
 data Section = Section
-    { secType :: Type
-    , secWordList :: [String] }
-    deriving (Eq, Show)
+  { secType :: Type
+  , secWordList :: [String]
+  } deriving (Eq, Show)
 
 section :: ParserT Section
 section = do
-    t <- typeHeader
-    char '\n'
-    words <- filter (not . null) <$> sepBy word (char '\n')
-    return $ Section t words
+  t <- typeHeader
+  char '\n'
+  words <- filter (not . null) <$> sepBy word (char '\n')
+  return $ Section t words
 
 wordList :: ParserT [Section]
 wordList = do
-    sections <- many section
-    eof
-    return sections
+  sections <- many section
+  eof
+  return sections
 
 type WordList = Map.Map Type [String]
 
@@ -60,12 +61,12 @@ getTypeWords :: Type -> WordList -> [String]
 getTypeWords t = Map.findWithDefault ["(" ++ show t ++ ")"] t
 
 typeWordMap :: [Section] -> WordList
-typeWordMap ss = case ss of
+typeWordMap ss =
+  case ss of
     [] -> Map.empty
     s:ss ->
-        let m = typeWordMap ss in
-            Map.insertWith (++) (secType s) (secWordList s) m
+      let m = typeWordMap ss
+      in Map.insertWith (++) (secType s) (secWordList s) m
 
 parseWordList :: String -> Text -> Either ParseError WordList
-parseWordList =
-    runParser (typeWordMap <$> wordList) ()
+parseWordList = runParser (typeWordMap <$> wordList) ()
