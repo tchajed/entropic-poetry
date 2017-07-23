@@ -1,3 +1,4 @@
+{-# LANGUAGE Rank2Types, FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module FormatParserSpec where
@@ -5,13 +6,39 @@ module FormatParserSpec where
 import Parser
 import Syntax
 
+import Control.Monad.Identity (Identity)
+import qualified Data.Set as Set
 import qualified Data.Text as T
-import ParserTesting
 import Test.Hspec
+import Text.Parsec
 
 {-# ANN module ("HLint: ignore Redundant do" :: String) #-}
 
 {-# ANN module ("HLint: ignore Use let" :: String) #-}
+
+shouldParseWithNames
+  :: (Show a, Eq a)
+  => [String]
+  -> (ParsecT T.Text (Set.Set Name) Identity a, T.Text)
+  -> a
+  -> Expectation
+shouldParseWithNames names (p, s) x =
+  let boundNames = Set.fromList (map Name names)
+  in runParser p boundNames "" s `shouldBe` Right x
+
+shouldParseTo
+  :: (Show a, Eq a)
+  => (ParsecT T.Text (Set.Set Name) Identity a, T.Text) -> a -> Expectation
+shouldParseTo = shouldParseWithNames []
+
+shouldNotParse
+  :: (Show a, Eq a)
+  => ParserT a -> String -> Expectation
+shouldNotParse p s =
+  runParser p Set.empty "" s `shouldSatisfy` \r ->
+    case r of
+      Left _ -> True
+      Right _ -> False
 
 spec :: Spec
 spec = do
@@ -36,8 +63,13 @@ spec = do
       (typeP, "oneof(a ,b, c)") `shouldParseTo` OneOf ["a ", "b", " c"]
     it "preposition type should parse" $ do
       (typeP, "preposition") `shouldParseTo` Preposition
-    it "reference type should parse" $ do
-      (typeP, "?foobar") `shouldParseTo` Reference (Name "foobar")
+    it "unbound reference type should not parse" $ do
+      typeP `shouldNotParse` "?foobar"
+    it "bound reference type should parse" $ do
+      shouldParseWithNames
+        ["foobar"]
+        (typeP, "?foobar")
+        (Reference (Name "foobar"))
   describe "identifier" $ do
     it "should parse alphabetic identifiers" $ do
       (identifier, "foo") `shouldParseTo` Name "foo"
@@ -58,9 +90,13 @@ spec = do
         Binding (Name "a1") (Verb Past)
     it "preposition function call should not parse" $ do
       typeP `shouldNotParse` "{preposition()}"
+    it "should not parse unbound references" $ do
+      placeholder `shouldNotParse` "{?name}"
     it "should parse references" $ do
-      (placeholder, "{?name}") `shouldParseTo`
-        PlainType (Reference (Name "name"))
+      shouldParseWithNames
+        ["name"]
+        (placeholder, "{?name}")
+        (PlainType (Reference (Name "name")))
     it "should parse bound oneof" $ do
       (placeholder, "{sel:oneof(a,b,c)}") `shouldParseTo`
         Binding (Name "sel") (OneOf ["a", "b", "c"])
@@ -71,8 +107,10 @@ spec = do
       (placeholder, "{oneof(a,,b)}") `shouldParseTo`
         PlainType (OneOf ["a", "", "b"])
     it "should parse bound reference" $ do
-      (placeholder, "{name2:?name}") `shouldParseTo`
-        Binding (Name "name2") (Reference (Name "name"))
+      shouldParseWithNames
+        ["name"]
+        (placeholder, "{name2:?name}")
+        (Binding (Name "name2") (Reference (Name "name")))
   describe "format" $ do
     noun <- return $ Placeholder (PlainType Noun)
     it "should parse just literal" $ do
@@ -95,3 +133,17 @@ spec = do
     it "should parse adjacent placeholders" $ do
       (format, "{noun}{verb(past)}") `shouldParseTo`
         [noun, Placeholder (PlainType (Verb Past))]
+    it "should parse bound references" $ do
+      (format, "{name:noun} {?name}") `shouldParseTo`
+        [ Placeholder (Binding (Name "name") Noun)
+        , Literal " "
+        , Placeholder (PlainType (Reference (Name "name")))
+        ]
+    it "should parse re-bound references references" $ do
+      (format, "{name:noun}{name2:?name}{?name2}") `shouldParseTo`
+        (let name = Name "name"
+             name2 = Name "name2"
+         in [ Placeholder (Binding name Noun)
+            , Placeholder (Binding name2 (Reference name))
+            , Placeholder (PlainType (Reference name2))
+            ])

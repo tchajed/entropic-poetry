@@ -1,9 +1,9 @@
 {-# LANGUAGE Rank2Types, FlexibleContexts #-}
 
 module WordList
-      -- for testing
   ( Section(..)
   , wordList
+  , ParserT
   , WordList
   , getTypeWords
   , parseWordList

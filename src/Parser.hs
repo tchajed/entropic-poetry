@@ -4,12 +4,17 @@ module Parser where
 
 import Control.Monad (void)
 import Control.Monad.Identity (Identity)
+import Control.Monad.State.Class (gets)
+import Control.Monad.Trans (lift)
+import qualified Data.Set as Set
 import Data.Text (Text)
 import Syntax
 import Text.Parsec
 
+type DefinedBindings = Set.Set Name
+
 type ParserT a = forall m s. Stream s m Char =>
-                               ParsecT s () m a
+                               ParsecT s DefinedBindings m a
 
 conjugation :: ParserT Conjugation
 conjugation =
@@ -30,13 +35,22 @@ identifier =
 functionCall :: String -> ParserT a -> ParserT a
 functionCall name p = string name >> between (char '(') (char ')') p
 
+validBinding :: Name -> ParserT Bool
+validBinding n = Set.member n <$> getState
+
 typeP :: ParserT Type
 typeP =
   choice
     [ string "noun" >> return Noun
     , Verb <$> functionCall "verb" conjugation
     , string "preposition" >> return Preposition
-    , char '?' >> Reference <$> identifier
+    , do char '?'
+         n <- identifier
+         valid <- validBinding n
+         if valid
+           then return $ Reference n
+           else let Name name = n
+                in unexpected $ "invalid reference " ++ name
     , OneOf <$> functionCall "oneof" (literal `sepBy` char ',')
     ]
   where
@@ -48,10 +62,11 @@ placeholder =
   between (char '{') (char '}') (try binderPlaceholder <|> typePlaceholder)
   where
     binderPlaceholder = do
-      b <- identifier
+      n <- identifier
       char ':'
       t <- typeP
-      return $ Binding b t
+      modifyState (Set.insert n)
+      return $ Binding n t
     typePlaceholder = PlainType <$> typeP
 
 -- TODO: comments should also be terminated by eof
@@ -73,4 +88,4 @@ format = manyTill tokenP eof
 
 -- String is used as a filename
 parseFormat :: String -> Text -> Either ParseError Format
-parseFormat = runParser format ()
+parseFormat = runParser format Set.empty

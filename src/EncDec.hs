@@ -153,8 +153,8 @@ decodeFormatData fmt s = do
   (ws, s) <- decodeFormat fmt s
   let (bytes, ws') = VB.decode cards ws
     in if ws' /= []
-        then liftPossibilities []
-        else return (bytes, s)
+         then liftPossibilities []
+         else return (bytes, s)
 
 runCtxMT
   :: Monad m
