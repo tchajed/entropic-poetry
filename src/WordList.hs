@@ -9,7 +9,6 @@ module WordList
   , parseWordList
   ) where
 
-import Control.Monad (void)
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import Syntax
@@ -45,9 +44,9 @@ data Section = Section
 section :: ParserT Section
 section = do
   t <- typeHeader
-  char '\n'
-  words <- filter (not . null) <$> sepBy word (char '\n')
-  return $ Section t words
+  _ <- char '\n'
+  ws <- filter (not . null) <$> sepBy word (char '\n')
+  return $ Section t ws
 
 wordList :: ParserT [Section]
 wordList = do
@@ -64,8 +63,8 @@ typeWordMap :: [Section] -> WordList
 typeWordMap ss =
   case ss of
     [] -> Map.empty
-    s:ss ->
-      let m = typeWordMap ss
+    s:ss' ->
+      let m = typeWordMap ss'
       in Map.insertWith (++) (secType s) (secWordList s) m
 
 parseWordList :: String -> Text -> Either ParseError WordList

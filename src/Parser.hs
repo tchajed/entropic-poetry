@@ -3,9 +3,6 @@
 module Parser where
 
 import Control.Monad (void)
-import Control.Monad.Identity (Identity)
-import Control.Monad.State.Class (gets)
-import Control.Monad.Trans (lift)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import Syntax
@@ -44,7 +41,7 @@ typeP =
     [ string "noun" >> return Noun
     , Verb <$> functionCall "verb" conjugation
     , string "preposition" >> return Preposition
-    , do char '?'
+    , do _ <- char '?'
          n <- identifier
          valid <- validBinding n
          if valid
@@ -63,7 +60,7 @@ placeholder =
   where
     binderPlaceholder = do
       n <- identifier
-      char ':'
+      _ <- char ':'
       t <- typeP
       modifyState (Set.insert n)
       return $ Binding n t

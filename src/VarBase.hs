@@ -18,7 +18,7 @@ type Card = Word
 
 -- if not given enough cardinalities, returns leftover words
 decodeNum :: [Card] -> [Int] -> (Integer, [Int])
-decodeNum cs [] = (0, [])
+decodeNum _ [] = (0, [])
 decodeNum (c:cs) (w:ws) =
   let (wsVal, rest) = decodeNum cs ws
   in (fromIntegral w + fromIntegral c * wsVal, rest)
@@ -54,9 +54,6 @@ decode cs ws =
 
 padTo :: Int -> [Word8] -> [Word8]
 padTo len bs = bs ++ replicate (len - length bs) 0
-
-trimTo :: Int -> [Word8] -> [Word8]
-trimTo = take
 
 encode :: [Card] -> [Word8] -> ([Int], [Word8])
 encode cs bytes =

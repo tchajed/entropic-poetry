@@ -1,4 +1,5 @@
 {-# LANGUAGE Rank2Types #-}
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 
 module EncDec
     -- encoding
@@ -14,7 +15,7 @@ import Control.Monad (zipWithM)
 import Control.Monad.Reader
 import Control.Monad.State.Strict
 import qualified Data.ByteString as BS
-import Data.List (elemIndex, stripPrefix)
+import Data.List (stripPrefix)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, mapMaybe)
 import Syntax
@@ -56,7 +57,7 @@ getWords t =
 typeCard :: Type -> DbMonad VB.Card
 typeCard t =
   case t of
-    Reference n -> return 1
+    Reference _ -> return 1
     OneOf ws -> fromIntegral . length <$> return ws
     _ -> fromIntegral . length <$> wordsForType t
 
@@ -178,8 +179,7 @@ decode wl fmt s =
   let parses = runCtxMT (decodeFormatData fmt s) wl
       completeParses = BS.pack <$> mapMaybe completeParse parses
   in case parses of
-       [(p, s)]
-         | s /= [] -> Left $ IncompleteParse s
+       [(_, s)] | s /= [] -> Left $ IncompleteParse s
        _ ->
          case completeParses of
            [] -> Left NoParse

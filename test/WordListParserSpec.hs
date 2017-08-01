@@ -7,7 +7,6 @@ import WordList
 
 import qualified Data.Text as T
 import Test.Hspec
-import Test.QuickCheck
 import Text.Parsec (runParser)
 
 {-# ANN module ("HLint: ignore Redundant do" :: String) #-}
